@@ -3,7 +3,26 @@ import { getProjectDetails } from './projectDetails.services';
 
 const initialState = {
   isLoading: false,
-  data: {},
+  data: {
+    id: '',
+    projectName: '',
+    description: '',
+    projectType: '',
+    division: '',
+    subDivision: '',
+    department: [],
+    status: '',
+    classificationType: '',
+    piiData: '',
+    createdOn: '',
+    owner: {
+      id: '',
+      firstName: '',
+      lastName: '',
+      mobile: '',
+      email: ''
+    },
+  },
   errors: '',
 };
 

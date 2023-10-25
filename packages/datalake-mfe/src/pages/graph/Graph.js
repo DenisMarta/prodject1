@@ -7,7 +7,7 @@ import Styles from './graph.scss';
 import FullScreenModeIcon from 'dna-container/FullScreenModeIcon';
 import Modal from 'dna-container/Modal';
 import GraphTable from '../../components/GraphTable';
-import TableFormTemp from '../../components/tableFormTemp/TableFormTemp';
+import TableForm from '../../components/tableForm/TableForm';
 import SlidingModal from '../../components/slidingModal/SlidingModal';
 import { setBox, setTables } from '../../redux/graphSlice';
 import { getProjectDetails } from '../../redux/graph.services';
@@ -68,7 +68,6 @@ const Graph = () => {
     const [offset, setOffset] = useState({ x: 0, y: 0 });
     const [movingTable, setMovingTable] = useState();
 
-    const [formChange, setFormChange] = useState(false);
     // const [editingLink, setEditingLink] = useState(null);
     const [tableSelectedId, setTableSelectId] = useState(null);
 
@@ -190,6 +189,24 @@ const Graph = () => {
                 </label>
                 <div>&nbsp;</div>
             </div>
+
+            <label className={classNames(Styles.inputLabel, 'input-label')}>
+                Coming Soon
+            </label>
+            <div className={classNames(Styles.flexLayout, Styles.disabled)}>
+                <label className="checkbox">
+                    <span className="wrapper">
+                        <input type="checkbox" className="ff-only" disabled={true} />
+                    </span>
+                    <span className="label">DDX</span>
+                </label>
+                <label className="checkbox">
+                    <span className="wrapper">
+                        <input type="checkbox" className="ff-only" disabled={true} />
+                    </span>
+                    <span className="label">CDC</span>
+                </label>
+            </div>
             <button
                 className={classNames('btn btn-primary')}
                 type="button"
@@ -199,6 +216,110 @@ const Graph = () => {
             </button>
         </div>
     </>;    
+
+
+    const [showCollabModal, setShowCollabModal] = useState(false);
+    const [selectedTable, setSelectedTable] = useState({});
+
+    const handleShowCollabModal = (table) => {
+        setSelectedTable(table);
+        setShowCollabModal(true);
+    }
+
+    const collabModalContent = <>
+        <p>{selectedTable.name}</p>
+        <div className={Styles.dagCollContent}>
+            <div className={Styles.dagCollContentList}>
+                <div className={Styles.dagCollContentListAdd}>
+                <AddUser getCollabarators={getCollabarators} dagId={dagItem.dagName} />
+                </div>
+                <div className={Styles.dagCollUsersList}>
+                {dagItem.collaborators?.length > 0 ? (
+                    <React.Fragment>
+                    <div className={Styles.collUserTitle}>
+                        <div className={Styles.collUserTitleCol}>User ID</div>
+                        <div className={Styles.collUserTitleCol}>Name</div>
+                        <div className={Styles.collUserTitleCol}>Permission</div>
+                        <div className={Styles.collUserTitleCol}></div>
+                    </div>
+                    <div className={Styles.collUserContent}>
+                        {dagItem.collaborators.map(
+                        (item: IPipelineProjectDagsCollabarator, collIndex: any) => {
+                            return (
+                            <div
+                                key={index + '-' + collIndex}
+                                className={Styles.collUserContentRow}
+                            >
+                                <div className={Styles.collUserTitleCol}>{item.username}</div>
+                                <div className={Styles.collUserTitleCol}>
+                                {item.firstName + ' ' + item.lastName}
+                                </div>
+                                <div className={Styles.collUserTitleCol}>
+                                <div
+                                    className={classNames(
+                                    'input-field-group include-error ' + Styles.inputGrp,
+                                    )}
+                                >
+                                    <label className={'checkbox ' + Styles.checkBoxDisable}>
+                                    <span className="wrapper">
+                                        <input
+                                        type="checkbox"
+                                        className="ff-only"
+                                        value="can_read"
+                                        checked={true}
+                                        />
+                                    </span>
+                                    <span className="label">Read</span>
+                                    </label>
+                                </div>
+                                &nbsp;&nbsp;&nbsp;
+                                <div
+                                    className={classNames(
+                                    'input-field-group include-error ' + Styles.inputGrp,
+                                    )}
+                                >
+                                    <label className={'checkbox ' + Styles.writeAccess}>
+                                    <span className="wrapper">
+                                        <input
+                                        type="checkbox"
+                                        className="ff-only"
+                                        value="can_edit"
+                                        checked={
+                                            item.permissions !== null
+                                            ? item.permissions.includes('can_edit')
+                                            : false
+                                        }
+                                        onClick={onPermissionEdit(dagItem.dagName, collIndex)}
+                                        />
+                                    </span>
+                                    <span className="label">Write</span>
+                                    </label>
+                                </div>
+                                </div>
+                                <div className={Styles.collUserTitleCol}>
+                                <div
+                                    className={Styles.deleteEntry}
+                                    onClick={onCollabaratorDelete(dagItem.dagName, collIndex)}
+                                >
+                                    <i className="icon mbc-icon trash-outline" />
+                                    Delete Entry
+                                </div>
+                                </div>
+                            </div>
+                            );
+                        },
+                        )}
+                    </div>
+                    </React.Fragment>
+                ) : (
+                    <div className={Styles.dagCollContentEmpoty}>
+                    <h6> Collaborators Not Exist!</h6>
+                    </div>
+                )}
+                </div>
+            </div>
+            </div>
+    </>;
   
   return (
     <>
@@ -263,6 +384,7 @@ const Graph = () => {
                             onTableMouseDown={tableMouseDownHandler}
                             tableSelectedId={tableSelectedId}
                             setTableSelectId={setTableSelectId}
+                            onHandleCollabModal={handleShowCollabModal}
                         />
                     </>
                 );
@@ -281,11 +403,30 @@ const Graph = () => {
             title={'Add Table'}
             toggle={toggleModal}
             setToggle={() => setToggleModal(!toggleModal)}
-            content={<TableFormTemp formChange={formChange} onFormChange={setFormChange} />} 
-            onCancel={console.log('oncancel')}
-            onSave={console.log('onsave')}
+            content={<TableForm setToggle={() => setToggleModal(!toggleModal)}  />}
         />
     }
+
+    {showCollabModal && (
+            <Modal
+                title={'Manage Collaborators for Table'}
+                showAcceptButton={false}
+                showCancelButton={false}
+                modalWidth={'60%'}
+                buttonAlignment="right"
+                show={showCollabModal}
+                content={collabModalContent}
+                scrollableContent={false}
+                onCancel={() => setShowCollabModal(false)}
+                modalStyle={{
+                    padding: '50px 35px 35px 35px',
+                    minWidth: 'unset',
+                    width: '60%',
+                    maxWidth: '50vw'
+                }}
+            />
+            )    
+        }
 
     { showInferenceModal &&
         <Modal

@@ -26,6 +26,7 @@ const GraphTable = (props) => {
 
     // 12: box-shadow
     const height = table.fields.length * fieldHeight + titleHeight + commentHeight + 12;
+
     return (
         <>
         <foreignObject
@@ -56,6 +57,9 @@ const GraphTable = (props) => {
 
                     {editable && (
                         <div className="table-settings">
+                            <button onClick={() => props.onHandleCollabModal(table)}>
+                                <i className="icon mbc-icon profile"></i>
+                            </button>
                             <button 
                             // onClick={() => dispatch(setEditingTable(table))}
                             >

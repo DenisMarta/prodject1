@@ -25,7 +25,7 @@ const DatalakeProjectCard = ({graph}) => {
     Tooltip.defaultSetup();
   }, []);
 
-  const onCollabsIconMouseOver = (e) => {
+  const onTablesIconMouseOver = (e) => {
     const targetElem = e.target;
     tooltipElem = targetElem.nextElementSibling;
     if (tooltipElem) {
@@ -37,7 +37,7 @@ const DatalakeProjectCard = ({graph}) => {
     }
   };
 
-  const onCollabsIconMouseOut = () => {
+  const onTablesIconMouseOut = () => {
     if (tooltipElem) {
       tooltipElem.classList.add('hide');
       tooltipElem.classList.remove('tooltip', 'show');
@@ -88,26 +88,25 @@ const DatalakeProjectCard = ({graph}) => {
               <div>{graph.classificationType || 'N/A'}</div>
             </div>
             <div className={Styles.cardCollabSection}>
-              <div>Collaborators</div>
-              {graph.collaborators?.length > 0 ? (
+              <div>Tables</div>
+              {graph.tables?.length > 0 ? (
                 <div>
                   <i className="icon mbc-icon profile"/>
-                  <span className={Styles.cardCollabIcon} onMouseOver={onCollabsIconMouseOver} onMouseOut={onCollabsIconMouseOut}>
-                    {graph.collaborators?.length}
+                  <span className={Styles.cardCollabIcon} onMouseOver={onTablesIconMouseOver} onMouseOut={onTablesIconMouseOut}>
+                    {graph.tables?.length}
                   </span>
                   <div className={classNames(Styles.collabsList, 'hide')}>
                     <ul>
-                      {graph.collaborators?.map((bucketItem, bucketIndex) => {
-                          // Check if lastName is more than 12 characters
-                          let lastName = bucketItem.lastName;
-                          if (lastName?.length > 12) {
-                            lastName = lastName.substring(0, 12) + " ...";
+                      {graph.tables?.map((tableItem, bucketIndex) => {
+                          // Check if tableName is more than 12 characters
+                          let tableName = tableItem.name;
+                          if (tableName?.length > 12) {
+                            tableName = tableName.substring(0, 12) + " ...";
                           }
                         return (
                           <li key={'collab' + bucketIndex}>
                             <span>
-                              {`${bucketItem.firstName} ${lastName}`}
-                              {graph.createdBy?.id === bucketItem.accesskey ? ' (Owner)' : ''}
+                              {tableName}
                             </span>
                           </li>
                         );
@@ -120,10 +119,7 @@ const DatalakeProjectCard = ({graph}) => {
           </div>
         </div>
         <div className={Styles.cardFooter}>
-          <div style={{paddingLeft: '20px'}}>
-            <a href="#" target="_blank" rel="noreferrer noopener">REST</a>&nbsp;&nbsp;
-            <a href="#" target="_blank" rel="noreferrer noopener">GRAPHQL</a>
-          </div>
+          <div>&nbsp;</div>
           <div className={Styles.btnGrp}>
             <button className="btn btn-primary" onClick={() => setEditProject(true)}>
               <i className="icon mbc-icon edit fill"></i>
@@ -136,7 +132,7 @@ const DatalakeProjectCard = ({graph}) => {
       </div>
       { editProject &&
         <Modal
-          title={'Edit Datalake Project'}
+          title={'Edit Data Lakehouse Project'}
           showAcceptButton={false}
           showCancelButton={false}
           modalWidth={'60%'}

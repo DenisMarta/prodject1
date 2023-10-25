@@ -201,7 +201,6 @@
 
 .flexLayout {
   display: flex;
-  justify-content: space-between;
   margin-bottom: 20px;
   > div {
     width: calc(50% - 10px);
@@ -213,6 +212,10 @@
     width: calc(50% - 10px);
     margin-top: 12px;
   }
+}
+.disabled {
+  pointer-events: none;
+  opacity: 0.5;
 }
 
 
