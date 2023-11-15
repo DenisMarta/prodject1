@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -470,6 +471,7 @@ public class BaseForecastService extends BaseCommonService<ForecastVO, ForecastN
 										Boolean warningsFileFlag = storageClient.isFilePresent(resultFolderPathForRun+ "WARNINGS.txt", bucketObjectDetails);
 										Boolean warningsInfoFileFlag = storageClient.isFilePresent(resultFolderPathForRun+ "run_info.txt", bucketObjectDetails);
 										Boolean exogenousFileFlag = storageClient.isFilePresent(resultFolderPathForRun+ EXOGENOUS_FILE_NAME, bucketObjectDetails);
+										Boolean configRecommendationFileFlag = storageClient.isFilePresent(resultFolderPathForRun+ "proposed_config/OPTIMISATION_CONFIG.yml", bucketObjectDetails);
 										//check if exogenous data is present
 										if(exogenousFileFlag){
 											run.setExogenData(true);
@@ -514,6 +516,49 @@ public class BaseForecastService extends BaseCommonService<ForecastVO, ForecastN
 													updatedStateMsg = errMsg;
 												}
 											}
+										}
+										if(configRecommendationFileFlag){
+											
+											String commonPrefix = "/results/"+run.getId() + "-" + run.getRunName()+"/proposed_config/";
+											String configRecommendationFile = commonPrefix +"OPTIMISATION_CONFIG.yml";
+
+											ResponseEntity<ByteArrayResource> configRecommendationFileDownloadResponse = storageClient.getDownloadFile(bucketName, configRecommendationFile);
+											log.info("successfully retrieved configRecommendationFile file contents for forecast {} and correaltionid{} and runname{}",
+													bucketName, correlationId, run.getRunName());
+
+											// if (configRecommendationFileDownloadResponse.getHeaders().containsKey(HttpHeaders.CONTENT_DISPOSITION)) {
+											// 	String contentDisposition = configRecommendationFileDownloadResponse.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION);
+											// 	String filename = extractFilename(contentDisposition);
+											// 	String contentType = configRecommendationFileDownloadResponse.getHeaders().getContentType().toString();
+											// }
+											// ByteArrayResource byteArrayResource = configRecommendationFileDownloadResponse.getBody();
+											
+											// if (byteArrayResource != null) {
+											// 	MultipartFile multipartFile = new ByteArrayResourceMultipartFile(
+											// 			"file",
+											// 			"filename.txt",  // Set the desired filename
+											// 			"text/plain",    // Set the desired content type
+											// 			byteArrayResource.getByteArray()
+											// 	);
+											// }
+											
+										
+											List<String> memberIds = new ArrayList<>();
+											List<String> memberEmails = new ArrayList<>();
+											if (entity.getData().getCollaborators() != null) {
+												memberIds = entity.getData().getCollaborators().stream()
+														.map(UserDetails::getId).collect(Collectors.toList());
+												memberEmails = entity.getData().getCollaborators().stream()
+														.map(UserDetails::getEmail).collect(Collectors.toList());
+											}
+											String ownerId = entity.getData().getCreatedBy().getId();
+											memberIds.add(ownerId);
+											String ownerEmail = entity.getData().getCreatedBy().getEmail();
+											memberEmails.add(ownerEmail);
+											String message ="";
+											message="new config recommendation is generated and available for ur project runs";
+											String notificationEventName = "Chronos: config recommendation is generated" ;
+											notifyUsers(forecastId, memberIds, memberEmails,message,"",notificationEventName,null);
 										}
 									}else {
 										String taskRunId=updatedRunResponse.getTasks().get(0).getRunId();
