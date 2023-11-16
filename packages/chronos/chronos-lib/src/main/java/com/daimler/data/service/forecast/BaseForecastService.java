@@ -11,6 +11,8 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import javax.servlet.http.HttpServletRequest;
+
 import com.daimler.data.db.json.*;
 import com.daimler.data.dto.forecast.*;
 import org.springframework.beans.BeanUtils;
@@ -19,12 +21,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.daimler.data.application.client.ChronosComparisonClient;
@@ -50,7 +57,9 @@ import com.daimler.data.dto.storage.FileDownloadResponseDto;
 import com.daimler.data.dto.storage.FileUploadResponseDto;
 import com.daimler.data.dto.storage.GetBucketByNameResponseWrapperDto;
 import com.daimler.data.dto.storage.UpdateBucketResponseWrapperDto;
+import com.daimler.data.dto.userinfo.UserInfoVO;
 import com.daimler.data.service.common.BaseCommonService;
+import com.daimler.data.util.MultipartFileConverter;
 import com.daimler.dna.notifications.common.producer.KafkaProducerService;
 import com.google.gson.JsonArray;
 
@@ -74,6 +83,12 @@ public class BaseForecastService extends BaseCommonService<ForecastVO, ForecastN
 	@Autowired
 	private StorageServicesClient storageClient;
 	
+	@Autowired
+	HttpServletRequest httpRequest;
+
+	@Autowired
+	private RestTemplate restTemplate;
+
 	@Autowired
 	private DataBricksClient dataBricksClient;
 	
@@ -471,7 +486,12 @@ public class BaseForecastService extends BaseCommonService<ForecastVO, ForecastN
 										Boolean warningsFileFlag = storageClient.isFilePresent(resultFolderPathForRun+ "WARNINGS.txt", bucketObjectDetails);
 										Boolean warningsInfoFileFlag = storageClient.isFilePresent(resultFolderPathForRun+ "run_info.txt", bucketObjectDetails);
 										Boolean exogenousFileFlag = storageClient.isFilePresent(resultFolderPathForRun+ EXOGENOUS_FILE_NAME, bucketObjectDetails);
-										Boolean configRecommendationFileFlag = storageClient.isFilePresent(resultFolderPathForRun+ "proposed_config/OPTIMISATION_CONFIG.yml", bucketObjectDetails);
+										List<BucketObjectDetailsDto> bucketObjectDetailsForConfigRecommendation=storageClient.getFilesPresent(bucketName,resultFolderPathForRun+"proposed_config/");
+										Optional<String> objectName = bucketObjectDetailsForConfigRecommendation.getData().getBucketObjects().stream()
+											.filter(dto -> dto.getObjectName().contains(fileNamePrefix))
+											.map(BucketObjectDetailsDto.bucketObjectDetailsForConfigRecommendation::getObjectName)
+											.findFirst();
+										Boolean configRecommendationFileFlag = storageClient.isFilePresent(resultFolderPathForRun+ "/proposed_config", bucketObjectDetails);
 										//check if exogenous data is present
 										if(exogenousFileFlag){
 											run.setExogenData(true);
@@ -519,30 +539,47 @@ public class BaseForecastService extends BaseCommonService<ForecastVO, ForecastN
 										}
 										if(configRecommendationFileFlag){
 											
-											String commonPrefix = "/results/"+run.getId() + "-" + run.getRunName()+"/proposed_config/";
-											String configRecommendationFile = commonPrefix +"OPTIMISATION_CONFIG.yml";
+											String commonPrefix = resultsPrefix+run.getId() + "-" + run.getRunName()+"/proposed_config/";
+										//	String configRecommendationFile = commonPrefix +"OPTIMISATION_CONFIG.yml";
 
+											
 											ResponseEntity<ByteArrayResource> configRecommendationFileDownloadResponse = storageClient.getDownloadFile(bucketName, configRecommendationFile);
-											log.info("successfully retrieved configRecommendationFile file contents for forecast {} and correaltionid{} and runname{}",
+											log.info("successfully retrieved configRecommendationFile contents for forecast {} and correaltionid{} and runname{}",
 													bucketName, correlationId, run.getRunName());
-
-											// if (configRecommendationFileDownloadResponse.getHeaders().containsKey(HttpHeaders.CONTENT_DISPOSITION)) {
-											// 	String contentDisposition = configRecommendationFileDownloadResponse.getHeaders().getFirst(HttpHeaders.CONTENT_DISPOSITION);
-											// 	String filename = extractFilename(contentDisposition);
-											// 	String contentType = configRecommendationFileDownloadResponse.getHeaders().getContentType().toString();
-											// }
-											// ByteArrayResource byteArrayResource = configRecommendationFileDownloadResponse.getBody();
+											ByteArrayResource byteArrayResource = configRecommendationFileDownloadResponse.getBody();
+											MultipartFile multipartFile = new MultipartFileConverter(
+												"file",
+												"OPTIMISATION_CONFIG.yml",  
+												"text/yaml",   
+												byteArrayResource.getByteArray()
+											);
 											
-											// if (byteArrayResource != null) {
-											// 	MultipartFile multipartFile = new ByteArrayResourceMultipartFile(
-											// 			"file",
-											// 			"filename.txt",  // Set the desired filename
-											// 			"text/plain",    // Set the desired content type
-											// 			byteArrayResource.getByteArray()
-											// 	);
+											
+											// try{
+											// String jwt = httpRequest.getHeader("Authorization");
+											// 	HttpHeaders headers = new HttpHeaders();
+											// 	headers.set("Accept", "application/json");
+											// 	headers.set("Content-Type", "application/json");
+											// 	headers.set("Authorization",jwt);
+											// 	String uri = "forecasts/"+forecastId+"/config-files";
+												
+											// 	MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+											// 	body.add("configFile", multipartFile);
+											// 	HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+											// 	ResponseEntity<ForecastConfigFileUploadResponseVO> response = restTemplate.exchange(
+											// 		uri, 
+											// 		HttpMethod.POST,
+											// 		requestEntity,  
+											// 		ForecastConfigFileUploadResponseVO.class
+											// 	);			
+											// 	ResponseEntity<ForecastConfigFileUploadResponseVO> ForecastConfigFileUploadResponseVO = restTemplate.exchange(uri, HttpMethod.POST,requestEntity, ForecastConfigFileUploadResponseVO.class);
+												
+											
+											// }catch(Exception e) {
+											// 	log.error("configRecommendationFile upload to config file failed:{}", e.getMessage());
+											// 	//throw e;
 											// }
 											
-										
 											List<String> memberIds = new ArrayList<>();
 											List<String> memberEmails = new ArrayList<>();
 											if (entity.getData().getCollaborators() != null) {
