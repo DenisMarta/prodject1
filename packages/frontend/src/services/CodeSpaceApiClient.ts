@@ -71,3 +71,4 @@ export class CodeSpaceApiClient {
     return this.get('workspaces/transparency');
   }
 }
+https://dev.dna.app.corpintra.net/
