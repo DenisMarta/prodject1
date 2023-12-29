@@ -17,3 +17,10 @@ services:
       dockerfile: $PWD/dockerfiles/app/result-backend.Dockerfile
 
   
+ result-backend:
+    image: ${IMAGE_RESULT_BACKEND:-dna_backend}
+    build:
+      context: ../packages/backend/
+      dockerfile: $PWD/dockerfiles/app/result-backend.Dockerfile
+
+  
